@@ -9,6 +9,7 @@ class KeyMapper:
 		self.currentOption = 0
 		self.currentSelection = -1
 		self.mapper = []
+		self.allowEnter = False
 
 		# Keyboard mapping
 		self.keymap = [
@@ -24,8 +25,8 @@ class KeyMapper:
 		# Menu options
 		self.menu = [
 		"Map button to keyboard event",
-		"Map axis to keyboard events",
-		"Map axis to multiple key events",
+		"Map analog stick/button to keyboard events",
+		"Map analog stick/button to 2 key events",
 		"Map sequence to single key press",
 		"Quit"
 		]
@@ -44,15 +45,50 @@ class KeyMapper:
 				for event in devices[fd].read():
 					if self.currentSelection == -1 and event.code in self.keymap and event.value == 1:
 						self.udpateMenu(event.code)
-					elif self.currentSelection > -1 and event.code not in self.keymap:
+					elif self.currentSelection > -1 and (event.code not in self.keymap or self.allowEnter == True):
 						self.storeKeyEvent(event)
 	
 	def storeKeyEvent(self, event):
 		# Single button to key mapping
 		if self.currentSelection == 0 and event.value == 1:
 			self.mapper.append(event.code)
-			
-		self.renderMenu()
+			self.renderMenu()
+		
+		# Single analog stick/button to key mapping
+		if self.currentSelection == 1:
+			# Accepting the axe event input
+			if len(self.mapper) == 1 and event.code == 28 and event.value == 1:
+				self.mapper.append(0)
+				self.renderMenu()
+				return
+			elif len(self.mapper) == 2 and event.value == 1:
+				self.mapper[1] = event.code
+				self.renderMenu()
+				return
+			# No other buttons accepted starting from here
+			if event.type != ecodes.EV_ABS:
+				return
+			delta = False
+			absevent = categorize(event)
+			axe_name = ecodes.bytype[absevent.event.type][absevent.event.code]
+			# Initialize the entry
+			if len(self.mapper) == 0:
+				self.mapper.append({})
+				self.mapper[0][axe_name] = [float("inf"),-float("inf")]
+			# Discard other axis events
+			if self.mapper[0].keys()[0] != axe_name:
+				return
+
+			if absevent.event.value < self.mapper[0][axe_name][0]:
+				delta = True
+				self.mapper[0][axe_name][0] = absevent.event.value
+			if absevent.event.value > self.mapper[0][axe_name][1]:
+				delta = True
+				self.mapper[0][axe_name][1] = absevent.event.value
+
+			if delta:
+				self.allowEnter = True
+				self.renderMenu()
 
 	def udpateMenu(self, eventCode):
 		# KEY UP
@@ -66,11 +102,11 @@ class KeyMapper:
 			 self.currentSelection = self.currentOption
 		self.renderMenu()
 		
-	def save(self):
+	def save(self, type='buttonToKey'):
 		global Config
 		print "\n Saving..."
 		conf = Config()
-		conf.addMapping(self.mapper)
+		conf.addMapping(self.mapper, type)
 		self.currentSelection = -1
 		self.mapper = []
 	
@@ -89,6 +125,18 @@ class KeyMapper:
 			print "\n".join(map(str, self.mapper))
 			if len(self.mapper) == 2:
 				self.save()
+				self.renderMenu()
+		# Axis to key press
+		if self.currentSelection == 1:
+			consequentMsg = "...when ready press enter" if len(self.mapper) == 1 else "...now press a key"
+			print ("Slowly move the stick/button all the way" if len(self.mapper) < 1 else consequentMsg)
+			print "-------------------------------"
+			if len(self.mapper) > 0:
+				currentAxe = self.mapper[0].keys()[0]
+				print "{} -> min: {}, max {}".format(currentAxe, self.mapper[0][currentAxe][0], self.mapper[0][currentAxe][1])
+			if len(self.mapper) == 2 and self.mapper[1] <> 0:
+				print "\n".join(map(str, self.mapper))
+				self.save('analogToKey')
 				self.renderMenu()
 
 if __name__ == "__main__":

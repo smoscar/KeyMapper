@@ -27,7 +27,11 @@ class Config:
         # Check for non existing types
         if type not in currentConfig:
             currentConfig[type] = {}
-        currentConfig[type][str(map[0])] = map[1]
+        if type == 'analogToKey':
+            mapKey = map[0].keys()[0]
+            currentConfig[type][mapKey] = {"axeValues": map[0][mapKey], "mappedKey": map[1]}
+        else:
+            currentConfig[type][str(map[0])] = map[1]
         self.setContents(currentConfig)
         
         return True
