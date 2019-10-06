@@ -8,7 +8,7 @@ class KeyTrigger:
 	def __init__(self):
 		conf = Config('/home/pi/KeyMap/config.cfg')
 		self.events = conf.getContents()
-		print self.events
+		self.pressedEvents = set()
 		self.captureKeyEvents()
 
 	def captureKeyEvents(self):
@@ -22,10 +22,29 @@ class KeyTrigger:
 			for fd in r:
 				for event in devices[fd].read():
 					deviceHash = hashlib.sha1(devices[fd].name).hexdigest()
-					#Button presses
-					if event.type == ecodes.EV_KEY and str(event.code) in self.events[deviceHash]['buttonToKey']:
-						buttonCode = ecodes.bytype[1][self.events[deviceHash]['buttonToKey'][str(event.code)]]
+					deviceMap = self.events[deviceHash]
+					#Button events
+					if event.type == ecodes.EV_KEY and 'buttonToKey' in deviceMap and str(event.code) in deviceMap['buttonToKey']:
+						buttonCode = ecodes.bytype[1][deviceMap['buttonToKey'][str(event.code)]]
 						with uinput.UInput() as ui:
-							ui.write(ecodes.EV_KEY, getattr(ecodes, buttonCode), 1)
+							ui.write(ecodes.EV_KEY, getattr(ecodes, buttonCode), event.value)
 							ui.syn()
-					# elif event.type == ecodes.EV_ABS:
+					elif event.type == ecodes.EV_ABS and 'analogToKey' in deviceMap:
+						absevent = categorize(event)
+						axe_name = ecodes.bytype[absevent.event.type][absevent.event.code]
+						if axe_name in deviceMap['analogToKey']:
+							axeEvent = deviceMap['analogToKey'][axe_name]
+							minValue = axeEvent['axeValues'][0]
+							maxValue = axeEvent['axeValues'][1]
+							triggerValue = ((maxValue - minValue) // 2) + minValue
+							buttonCode = ecodes.bytype[1][axeEvent['mappedKey']]
+							if absevent.event.value >= triggerValue and axe_name not in self.pressedEvents:
+								self.pressedEvents.add(axe_name)
+								with uinput.UInput() as ui:
+									ui.write(ecodes.EV_KEY, getattr(ecodes, buttonCode), 1)
+									ui.syn()
+							elif absevent.event.value < triggerValue and axe_name in self.pressedEvents:
+								self.pressedEvents.remove(axe_name)
+								with uinput.UInput() as ui:
+									ui.write(ecodes.EV_KEY, getattr(ecodes, buttonCode), 0)
+									ui.syn()
