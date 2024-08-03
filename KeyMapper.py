@@ -49,6 +49,7 @@ class KeyMapper:
 			for fd in r:
 				for event in devices[fd].read():
 					# Main Menu selection
+					print(event.code)
 					if self.currentSelection == -1 and event.code in self.keymap and event.value == 1:
 						self.udpateMenu(event.code)
 					# Mapping events
@@ -112,7 +113,7 @@ class KeyMapper:
 		
 	def save(self, type='buttonToKey'):
 		global Config
-		print "\n Saving..."
+		print("\n Saving...")
 		conf = Config()
 		conf.addMapping(self.mapper, self.lastEventHash, type)
 		self.lastEventHash = ''
@@ -123,27 +124,27 @@ class KeyMapper:
 		tmp = sp.call('clear', shell=True)
 		# Main menu
 		if self.currentSelection == -1:
-			print "Select option with arrow keys"
-			print "-------------------------------"
+			print("Select option with arrow keys")
+			print("-------------------------------")
 			for m in range(len(self.menu)):
-				print "{}{}. {}".format(("> " if self.currentOption == m else "  "), (m+1), self.menu[m])
+				print("{}{}. {}".format(("> " if self.currentOption == m else "  "), (m+1), self.menu[m]))
 		# Button to key press
 		if self.currentSelection == 0:
-			print ("Press a button on the controller" if len(self.mapper) < 1 else "...now press a key")
-			print "-------------------------------"
-			print "\n".join(map(str, self.mapper))
+			print("Press a button on the controller" if len(self.mapper) < 1 else "...now press a key")
+			print("-------------------------------")
+			print("\n".join(map(str, self.mapper)))
 			if len(self.mapper) == 2:
 				self.save()
 				self.renderMenu()
 		# Axis to key press
 		if self.currentSelection == 1:
 			consequentMsg = "...when ready press enter" if len(self.mapper) == 1 else "...now press a key"
-			print ("Slowly move the stick/button all the way" if len(self.mapper) < 1 else consequentMsg)
-			print "-------------------------------"
+			print("Slowly move the stick/button all the way" if len(self.mapper) < 1 else consequentMsg)
+			print("-------------------------------")
 			if len(self.mapper) > 0:
 				currentAxe = self.mapper[0].keys()[0]
-				print "{} -> min: {}, max {}".format(currentAxe, self.mapper[0][currentAxe][0], self.mapper[0][currentAxe][1])
-			if len(self.mapper) == 2 and self.mapper[1] <> 0:
-				print "\n".join(map(str, self.mapper))
+				print("{} -> min: {}, max {}".format(currentAxe, self.mapper[0][currentAxe][0], self.mapper[0][currentAxe][1]))
+			if len(self.mapper) == 2 and self.mapper[1] != 0:
+				print("\n".join(map(str, self.mapper)))
 				self.save('analogToKey')
 				self.renderMenu()

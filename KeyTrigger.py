@@ -6,7 +6,7 @@ from Config import *
 class KeyTrigger:
 	"""docstring for KeyTrigger"""
 	def __init__(self):
-		conf = Config('/home/pi/KeyMap/config.cfg')
+		conf = Config('/home/pi/KeyMapper/config.cfg')
 		self.events = conf.getContents()
 		self.pressedEvents = set()
 		self.captureKeyEvents()

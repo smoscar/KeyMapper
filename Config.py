@@ -19,7 +19,7 @@ class Config:
 		config.close()
 	
 	def addMapping(self, map, device, type='buttonToKey'):
-		if len(map) <> 2:
+		if len(map) != 2:
 			return False
 		# Save the config
 		currentConfig = self.getContents()
