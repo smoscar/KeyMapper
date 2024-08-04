@@ -19,10 +19,15 @@ class KeyMapper:
 		105,	# Left
 		106,	# Right
 		108,	# Down
+		308,	# Up Gamepad
+		310,	# Left Gamepad
+		311,	# Right Gamepad
+		309,	# Down Gamepad
 		1,		# Escape (Sleep)
 		28,		# Return (Mode)
 		44,		# Key Z (A)
 		45,		# Key X (B)
+		306,		# Key A (Gamepad)
 		]
 		# Menu options
 		self.menu = [
@@ -37,7 +42,7 @@ class KeyMapper:
 		
 	def updateDeviceHash(self, name):
 		if self.lastEventHash == '':
-			self.lastEventHash = hashlib.sha1(name).hexdigest()
+			self.lastEventHash = hashlib.sha1(name.encode('utf-8')).hexdigest()
 
 	def captureKeyEvents(self):
 		# Check for connected devices
@@ -48,8 +53,8 @@ class KeyMapper:
 			r, w, x = select(devices, [], [])
 			for fd in r:
 				for event in devices[fd].read():
+					print(devices)
 					# Main Menu selection
-					print(event.code)
 					if self.currentSelection == -1 and event.code in self.keymap and event.value == 1:
 						self.udpateMenu(event.code)
 					# Mapping events
@@ -66,7 +71,7 @@ class KeyMapper:
 		# Map analog stick/button to keyboard events
 		if self.currentSelection == 1:
 			# Accepting the axe event input
-			if len(self.mapper) == 1 and event.code == 28 and event.value == 1:
+			if len(self.mapper) == 1 and (event.code == 28 or event.code == 306)  and event.value == 1:
 				self.mapper.append(0)
 				self.renderMenu()
 				return
@@ -85,7 +90,7 @@ class KeyMapper:
 				self.mapper.append({})
 				self.mapper[0][axe_name] = [float("inf"),-float("inf")]
 			# Discard other axis events
-			if self.mapper[0].keys()[0] != axe_name:
+			if list(self.mapper[0].keys())[0] != axe_name:
 				return
 
 			if absevent.event.value < self.mapper[0][axe_name][0]:
@@ -101,13 +106,13 @@ class KeyMapper:
 
 	def udpateMenu(self, eventCode):
 		# KEY UP
-		if eventCode == 103:
+		if eventCode == 103 or eventCode == 308:
 			self.currentOption = (self.currentOption - 1) if ((self.currentOption - 1) >= 0) else (len(self.menu)-1)
 		# KEY DOWN
-		if eventCode == 108:
+		if eventCode == 108 or eventCode == 309:
 			self.currentOption = (self.currentOption + 1) if ((self.currentOption + 1) < len(self.menu)) else 0
 		# Select option 
-		if eventCode == 28 or eventCode == 45:
+		if eventCode == 28 or eventCode == 45 or eventCode == 306:
 			 self.currentSelection = self.currentOption
 		self.renderMenu()
 		
@@ -142,7 +147,7 @@ class KeyMapper:
 			print("Slowly move the stick/button all the way" if len(self.mapper) < 1 else consequentMsg)
 			print("-------------------------------")
 			if len(self.mapper) > 0:
-				currentAxe = self.mapper[0].keys()[0]
+				currentAxe = list(self.mapper[0].keys())[0]
 				print("{} -> min: {}, max {}".format(currentAxe, self.mapper[0][currentAxe][0], self.mapper[0][currentAxe][1]))
 			if len(self.mapper) == 2 and self.mapper[1] != 0:
 				print("\n".join(map(str, self.mapper)))
